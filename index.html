@@ -41,7 +41,14 @@
     text-transform:uppercase; margin-bottom:4px;
   }
   header h1{font-size:20px; font-weight:700; letter-spacing:-.01em;}
-  header .ver{font-size:12px; color:#9fb0c1; margin-top:2px;}
+  header .ver{font-size:12px; color:#9fb0c1; margin-top:2px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  header .updated{
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:11.5px; font-weight:700; color:#cfe0d4;
+    background:rgba(74,222,128,.14); border:1px solid rgba(74,222,128,.3);
+    padding:2px 9px; border-radius:999px;
+  }
+  header .updated .dot{width:6px; height:6px; border-radius:50%; background:#4ade80; flex:none;}
 
   main{padding:16px;}
 
@@ -233,7 +240,10 @@
   <div class="wrap">
     <div class="eyebrow">Packaging Spec Finder</div>
     <h1>바이어별 포장 규격 조회</h1>
-    <div class="ver">기준 자료: 바이어별 포장 규격 리스트 v5</div>
+    <div class="ver">
+      <span>기준 자료: 바이어별 포장 규격 리스트 v5</span>
+      <span class="updated"><span class="dot"></span>최근 업데이트 2026-07-06</span>
+    </div>
   </div>
 </header>
 
