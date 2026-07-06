@@ -242,16 +242,43 @@
   .send-msg.ok{display:block; color:#1d7a3e;}
   .send-msg.fail{display:block; color:#c0362c;}
 
+  /* 언어 선택 */
+  .langs{display:flex; gap:6px; margin-top:12px; flex-wrap:wrap;}
+  .langs button{
+    min-height:32px; padding:5px 12px;
+    font-size:12.5px; font-weight:700; font-family:inherit;
+    color:#c8d4e0; background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.18); border-radius:999px; cursor:pointer;
+  }
+  .langs button.on{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .langs button:focus-visible{outline:2px solid #fff; outline-offset:1px;}
+
+  /* 아랍어(RTL) 보정 */
+  [dir="rtl"] select{
+    background-position:left 12px center;
+    padding:11px 12px 11px 38px;
+  }
+  [dir="rtl"] .spec th{text-align:right; padding:10px 16px 10px 6px;}
+  [dir="rtl"] .spec td{padding:10px 10px 10px 16px;}
+  [dir="rtl"] .fab{left:16px; right:auto;}
+
 </style>
 </head>
 <body>
 <header>
   <div class="wrap">
     <div class="eyebrow">Packaging Spec Finder</div>
-    <h1>바이어별 포장 규격 조회</h1>
+    <h1 id="appTitle">바이어별 포장 규격 조회</h1>
     <div class="ver">
-      <span>기준 자료: 바이어별 포장 규격 리스트 v5</span>
-      <span class="updated"><span class="dot"></span>최근 업데이트 2026-07-06</span>
+      <span id="baseDoc">기준 자료: 바이어별 포장 규격 리스트 v5</span>
+      <span class="updated"><span class="dot"></span><span id="updLabel">최근 업데이트</span>&nbsp;2026-07-06</span>
+    </div>
+    <div class="langs" id="langBar" role="group" aria-label="Language">
+      <button type="button" data-lang="ko" class="on">한국어</button>
+      <button type="button" data-lang="en">English</button>
+      <button type="button" data-lang="vi">Tiếng Việt</button>
+      <button type="button" data-lang="ar">العربية</button>
+      <button type="button" data-lang="fr">Français</button>
     </div>
   </div>
 </header>
@@ -260,19 +287,19 @@
   <section class="panel" aria-label="조회 조건 선택">
     <div class="steps">
       <div class="step" id="stepBuyer">
-        <label for="selBuyer"><span class="num">1</span>바이어</label>
+        <label for="selBuyer"><span class="num">1</span><span id="lblBuyer">바이어</span></label>
         <select id="selBuyer"></select>
       </div>
       <div class="step" id="stepProd">
-        <label for="selProd"><span class="num">2</span>품종</label>
+        <label for="selProd"><span class="num">2</span><span id="lblProd">품종</span></label>
         <select id="selProd" disabled></select>
       </div>
       <div class="step" id="stepWidth">
-        <label for="selWidth"><span class="num">3</span>폭</label>
+        <label for="selWidth"><span class="num">3</span><span id="lblWidth">폭</span></label>
         <select id="selWidth" disabled></select>
       </div>
       <div class="step" id="stepLen">
-        <label for="selLen"><span class="num">4</span>길이</label>
+        <label for="selLen"><span class="num">4</span><span id="lblLen">길이</span></label>
         <select id="selLen" disabled></select>
       </div>
     </div>
@@ -286,7 +313,7 @@
     <div class="hint">바이어부터 순서대로 선택하면<br>해당 규격의 포장 정보가 표시됩니다.</div>
   </section>
 
-  <footer>등재 규격 <span id="totalCount"></span>건 · 오프라인에서도 동작합니다</footer>
+  <footer id="appFooter">등재 규격 건 · 오프라인에서도 동작합니다</footer>
 </main>
 
 <button type="button" class="fab" id="fabReport">✉ 의견 보내기</button>
@@ -295,15 +322,15 @@
   <div class="modal">
     <h2 id="modalTitle">규격 신고 / 의견 보내기</h2>
     <div class="ctx" id="modalCtx" style="display:none"></div>
-    <label for="repType">유형</label>
+    <label for="repType" id="lblType">유형</label>
     <select id="repType">
       <option value="규격 불일치">규격이 실제와 다름</option>
       <option value="규격 추가 요청">없는 규격 추가 요청</option>
       <option value="기타 의견">기타 의견</option>
     </select>
-    <label for="repText">내용 <span style="color:var(--accent)">*</span></label>
+    <label for="repText" id="lblText">내용 <span style="color:var(--accent)">*</span></label>
     <textarea id="repText" placeholder="예: 보빈 색이 아이보리가 아니라 파랑입니다 / OO바이어 폭 350 규격이 없습니다"></textarea>
-    <label for="repName">이름·소속 (선택)</label>
+    <label for="repName" id="lblName">이름·소속 (선택)</label>
     <input type="text" id="repName" placeholder="예: 포장반 홍길동">
     <div class="row-btns">
       <button type="button" class="btn-cancel" id="btnModalCancel">닫기</button>
@@ -321,10 +348,261 @@ const COLOR_MAP = {
   '녹색':'#16a34a','검정':'#1a1a1a','흰색':'#ffffff','보라':'#7c3aed','주황':'#f97316'
 };
 
+// ===== 다국어 (i18n) =====
+const LANG_KEY = 'pkgspec-lang';
+let LANG = 'ko';
+try{ const saved = localStorage.getItem(LANG_KEY); if(saved && ['ko','en','vi','ar','fr'].includes(saved)) LANG = saved; }catch(e){}
+
+const I18N = {
+ko: {
+  title:'바이어별 포장 규격 조회',
+  baseDoc:'기준 자료: 바이어별 포장 규격 리스트 v5',
+  updated:'최근 업데이트',
+  buyer:'바이어', prod:'품종', width:'폭', len:'길이',
+  phBuyer:'바이어 선택', phProd:'품종 선택', phWidth:'폭 선택', phLen:'길이 선택',
+  lenEmpty:'(길이 미기재)',
+  reset:'초기화',
+  countPartial:'조건에 해당하는 규격 <b>{n}</b>건',
+  countResult:'조회 결과 <b>{n}</b>건',
+  hintStart:'바이어부터 순서대로 선택하면<br>해당 규격의 포장 정보가 표시됩니다.',
+  hintMore:'나머지 항목을 선택하면 상세 규격이 표시됩니다.',
+  hintNone:'해당 조합의 규격이 없습니다.<br>조건을 다시 선택해 주세요.',
+  footer:'등재 규격 {n}건 · 오프라인에서도 동작합니다',
+  fPallet:'파렛트 규격', fGanji:'간지 규격', fAircap:'에어캡 규격', fMaguri:'마구리 규격',
+  fBox:'박스 규격', fBobbin:'보빈 규격', fOpp:'OPP 색', fBand:'밴딩 색',
+  fLabel:'라벨 색', fExp:'라벨 유효기간', fNote:'비고',
+  notListed:'미기재',
+  na:'해당 없음 (X)', yes:'O', yesMonth:'O({n}개월)', yesYear:'O({n}년)',
+  shipPH:'필리핀 출하 → CARGO MARKINGS 부착',
+  shipBS:'부산 출하 → PLT 라벨 미부착',
+  reportBtn:'⚠ 이 규격이 실제와 다르면 신고하기',
+  fab:'✉ 의견 보내기',
+  modalTitle:'규격 신고 / 의견 보내기',
+  ctx:'대상 규격: ',
+  typeL:'유형', t1:'규격이 실제와 다름', t2:'없는 규격 추가 요청', t3:'기타 의견',
+  contentL:'내용',
+  textPH:'예: 보빈 색이 아이보리가 아니라 파랑입니다 / OO바이어 폭 350 규격이 없습니다',
+  nameL:'이름·소속 (선택)', namePH:'예: 포장반 홍길동',
+  close:'닫기', send:'신고 전송', sending:'전송 중...', done:'전송 완료',
+  ok:'접수되었습니다. 확인 후 규격에 반영하겠습니다.',
+  fail:'전송에 실패했습니다. 인터넷 연결을 확인하고 다시 눌러주세요.',
+  tk_노랑:'노랑', tk_파랑:'파랑', tk_빨강:'빨강', tk_아이보리:'아이보리', tk_녹색:'녹색',
+  tk_검정:'검정', tk_흰색:'흰색', tk_보라:'보라', tk_주황:'주황', tk_투명:'투명',
+  tk_전용:'전용', tk_정방향:'정방향', tk_역방향:'역방향',
+  nStd:'※포장 표준(Ver.2) 미등재 — 포장반 작업방법 기준',
+  nPH:'필리핀향 — Cargo Marking 부착', nPH2:'필리핀향',
+  nBS:'부산향 — 파렛트 라벨 미부착', nBS2:'부산향',
+  nPin1:'침판 부착', nPin0:'침판 미부착',
+  nGz:'간지 추정', nLbl:'라벨 색: OPP↔라벨 대응 기준 추정',
+  nStack:'{a}단 {b}개 적재', nRolls:'{n}ROLL/파렛트'
+},
+en: {
+  title:'Packaging Spec Lookup by Buyer',
+  baseDoc:'Source: Buyer Packaging Spec List v5',
+  updated:'Last updated',
+  buyer:'Buyer', prod:'Product type', width:'Width', len:'Length',
+  phBuyer:'Select buyer', phProd:'Select product', phWidth:'Select width', phLen:'Select length',
+  lenEmpty:'(length not listed)',
+  reset:'Reset',
+  countPartial:'Matching specs: <b>{n}</b>',
+  countResult:'Results: <b>{n}</b>',
+  hintStart:'Select buyer → product → width → length<br>to see the packaging details.',
+  hintMore:'Select the remaining items to see full details.',
+  hintNone:'No spec found for this combination.<br>Please try different options.',
+  footer:'Registered specs: {n} · Works offline',
+  fPallet:'Pallet', fGanji:'Divider sheet (간지)', fAircap:'Bubble wrap (에어캡)', fMaguri:'End board (마구리)',
+  fBox:'Box', fBobbin:'Bobbin', fOpp:'OPP color', fBand:'Banding color',
+  fLabel:'Label color', fExp:'Expiry on label', fNote:'Notes',
+  notListed:'not listed',
+  na:'N/A (X)', yes:'Yes', yesMonth:'Yes ({n} mo.)', yesYear:'Yes ({n} yr.)',
+  shipPH:'Philippines shipment → attach CARGO MARKINGS',
+  shipBS:'Busan shipment → NO PLT label',
+  reportBtn:'⚠ Report if this spec is wrong',
+  fab:'✉ Send feedback',
+  modalTitle:'Report / Feedback',
+  ctx:'Target spec: ',
+  typeL:'Type', t1:'Spec differs from actual', t2:'Request a missing spec', t3:'Other feedback',
+  contentL:'Details',
+  textPH:'e.g. Bobbin color is blue, not ivory',
+  nameL:'Name · team (optional)', namePH:'e.g. Packing team, Hong',
+  close:'Close', send:'Send', sending:'Sending...', done:'Sent',
+  ok:'Received. We will review and update the spec.',
+  fail:'Failed to send. Check your connection and try again.',
+  tk_노랑:'Yellow', tk_파랑:'Blue', tk_빨강:'Red', tk_아이보리:'Ivory', tk_녹색:'Green',
+  tk_검정:'Black', tk_흰색:'White', tk_보라:'Purple', tk_주황:'Orange', tk_투명:'Transparent',
+  tk_전용:'Dedicated', tk_정방향:'Forward', tk_역방향:'Reverse',
+  nStd:'※ Not in Packaging Standard (Ver.2) — per packing team work method',
+  nPH:'For Philippines — attach Cargo Marking', nPH2:'For Philippines',
+  nBS:'For Busan — no pallet label', nBS2:'For Busan',
+  nPin1:'With spike board (침판)', nPin0:'No spike board (침판)',
+  nGz:'divider size estimated', nLbl:'Label color: estimated from OPP↔label rule',
+  nStack:'{a} tiers × {b} pcs', nRolls:'{n} rolls/pallet'
+},
+vi: {
+  title:'Tra cứu quy cách đóng gói theo khách hàng',
+  baseDoc:'Tài liệu gốc: Danh sách quy cách đóng gói theo khách hàng v5',
+  updated:'Cập nhật',
+  buyer:'Khách hàng', prod:'Chủng loại', width:'Chiều rộng', len:'Chiều dài',
+  phBuyer:'Chọn khách hàng', phProd:'Chọn chủng loại', phWidth:'Chọn chiều rộng', phLen:'Chọn chiều dài',
+  lenEmpty:'(không ghi chiều dài)',
+  reset:'Đặt lại',
+  countPartial:'Quy cách phù hợp: <b>{n}</b>',
+  countResult:'Kết quả: <b>{n}</b>',
+  hintStart:'Chọn theo thứ tự: khách hàng → chủng loại → rộng → dài<br>để xem thông tin đóng gói.',
+  hintMore:'Chọn các mục còn lại để xem chi tiết.',
+  hintNone:'Không có quy cách cho tổ hợp này.<br>Vui lòng chọn lại.',
+  footer:'Tổng {n} quy cách · Hoạt động cả khi offline',
+  fPallet:'Pallet', fGanji:'Giấy lót (간지)', fAircap:'Xốp hơi (에어캡)', fMaguri:'Tấm chắn đầu (마구리)',
+  fBox:'Thùng carton', fBobbin:'Lõi cuộn (bobbin)', fOpp:'Màu OPP', fBand:'Màu dây đai',
+  fLabel:'Màu nhãn', fExp:'Hạn dùng trên nhãn', fNote:'Ghi chú',
+  notListed:'không ghi',
+  na:'Không có (X)', yes:'Có', yesMonth:'Có ({n} tháng)', yesYear:'Có ({n} năm)',
+  shipPH:'Xuất Philippines → dán CARGO MARKINGS',
+  shipBS:'Xuất Busan → KHÔNG dán nhãn PLT',
+  reportBtn:'⚠ Báo cáo nếu quy cách này sai',
+  fab:'✉ Gửi ý kiến',
+  modalTitle:'Báo cáo / Gửi ý kiến',
+  ctx:'Quy cách: ',
+  typeL:'Loại', t1:'Quy cách khác với thực tế', t2:'Yêu cầu thêm quy cách', t3:'Ý kiến khác',
+  contentL:'Nội dung',
+  textPH:'VD: Màu lõi cuộn là xanh dương, không phải màu ngà',
+  nameL:'Tên · bộ phận (không bắt buộc)', namePH:'VD: Tổ đóng gói, Nguyễn Văn A',
+  close:'Đóng', send:'Gửi', sending:'Đang gửi...', done:'Đã gửi',
+  ok:'Đã nhận. Chúng tôi sẽ kiểm tra và cập nhật.',
+  fail:'Gửi thất bại. Kiểm tra kết nối mạng và thử lại.',
+  tk_노랑:'Vàng', tk_파랑:'Xanh dương', tk_빨강:'Đỏ', tk_아이보리:'Màu ngà', tk_녹색:'Xanh lá',
+  tk_검정:'Đen', tk_흰색:'Trắng', tk_보라:'Tím', tk_주황:'Cam', tk_투명:'Trong suốt',
+  tk_전용:'Chuyên dụng', tk_정방향:'Chiều thuận', tk_역방향:'Chiều ngược',
+  nStd:'※ Chưa có trong Tiêu chuẩn đóng gói (Ver.2) — theo cách làm của tổ đóng gói',
+  nPH:'Hàng đi Philippines — dán Cargo Marking', nPH2:'Hàng đi Philippines',
+  nBS:'Hàng đi Busan — không dán nhãn pallet', nBS2:'Hàng đi Busan',
+  nPin1:'Có tấm gai (침판)', nPin0:'Không có tấm gai (침판)',
+  nGz:'kích thước giấy lót ước tính', nLbl:'Màu nhãn: ước tính theo quy tắc OPP↔nhãn',
+  nStack:'{a} tầng × {b} cái', nRolls:'{n} cuộn/pallet'
+},
+ar: {
+  title:'البحث عن مواصفات التغليف حسب العميل',
+  baseDoc:'المصدر: قائمة مواصفات التغليف حسب العميل v5',
+  updated:'آخر تحديث',
+  buyer:'العميل', prod:'النوع', width:'العرض', len:'الطول',
+  phBuyer:'اختر العميل', phProd:'اختر النوع', phWidth:'اختر العرض', phLen:'اختر الطول',
+  lenEmpty:'(الطول غير مذكور)',
+  reset:'إعادة تعيين',
+  countPartial:'المواصفات المطابقة: <b>{n}</b>',
+  countResult:'النتائج: <b>{n}</b>',
+  hintStart:'اختر بالترتيب: العميل ← النوع ← العرض ← الطول<br>لعرض معلومات التغليف.',
+  hintMore:'اختر العناصر المتبقية لعرض التفاصيل.',
+  hintNone:'لا توجد مواصفات لهذا الاختيار.<br>يرجى تغيير الاختيار والمحاولة من جديد.',
+  footer:'إجمالي المواصفات: {n} · يعمل بدون إنترنت',
+  fPallet:'البليت (Pallet)', fGanji:'ورق فاصل (간지)', fAircap:'غلاف فقاعي (에어캡)', fMaguri:'لوح جانبي (마구리)',
+  fBox:'الصندوق (Box)', fBobbin:'البكرة (Bobbin)', fOpp:'لون OPP', fBand:'لون الحزام',
+  fLabel:'لون الملصق', fExp:'الصلاحية على الملصق', fNote:'ملاحظات',
+  notListed:'غير مذكور',
+  na:'لا يوجد (X)', yes:'نعم', yesMonth:'نعم ({n} شهر)', yesYear:'نعم ({n} سنة)',
+  shipPH:'شحن إلى الفلبين ← ألصق CARGO MARKINGS',
+  shipBS:'شحن إلى بوسان ← بدون ملصق PLT',
+  reportBtn:'⚠ أبلغ إذا كانت هذه المواصفات خاطئة',
+  fab:'✉ إرسال ملاحظة',
+  modalTitle:'إبلاغ / إرسال ملاحظة',
+  ctx:'المواصفات المعنية: ',
+  typeL:'النوع', t1:'المواصفات تختلف عن الواقع', t2:'طلب إضافة مواصفات ناقصة', t3:'ملاحظة أخرى',
+  contentL:'المحتوى',
+  textPH:'مثال: لون البكرة أزرق وليس عاجيًا',
+  nameL:'الاسم · القسم (اختياري)', namePH:'مثال: فريق التغليف',
+  close:'إغلاق', send:'إرسال', sending:'جارٍ الإرسال...', done:'تم الإرسال',
+  ok:'تم الاستلام. سنراجع ونحدّث المواصفات.',
+  fail:'فشل الإرسال. تحقق من الاتصال وحاول مرة أخرى.',
+  tk_노랑:'أصفر', tk_파랑:'أزرق', tk_빨강:'أحمر', tk_아이보리:'عاجي', tk_녹색:'أخضر',
+  tk_검정:'أسود', tk_흰색:'أبيض', tk_보라:'بنفسجي', tk_주황:'برتقالي', tk_투명:'شفاف',
+  tk_전용:'مخصص', tk_정방향:'اتجاه أمامي', tk_역방향:'اتجاه عكسي',
+  nStd:'※ غير مدرج في معيار التغليف (Ver.2) — حسب طريقة عمل فريق التغليف',
+  nPH:'وجهة الفلبين — ألصق Cargo Marking', nPH2:'وجهة الفلبين',
+  nBS:'وجهة بوسان — بدون ملصق البليت', nBS2:'وجهة بوسان',
+  nPin1:'مع لوح مسامير (침판)', nPin0:'بدون لوح مسامير (침판)',
+  nGz:'مقاس الورق الفاصل تقديري', nLbl:'لون الملصق: تقديري حسب قاعدة OPP↔الملصق',
+  nStack:'{a} طبقات × {b} قطعة', nRolls:'{n} لفة/بليت'
+},
+fr: {
+  title:"Recherche des spécifications d'emballage par client",
+  baseDoc:"Source : Liste des spécifications d'emballage par client v5",
+  updated:'Mis à jour',
+  buyer:'Client', prod:'Type de produit', width:'Largeur', len:'Longueur',
+  phBuyer:'Choisir le client', phProd:'Choisir le type', phWidth:'Choisir la largeur', phLen:'Choisir la longueur',
+  lenEmpty:'(longueur non indiquée)',
+  reset:'Réinitialiser',
+  countPartial:'Spécifications correspondantes : <b>{n}</b>',
+  countResult:'Résultats : <b>{n}</b>',
+  hintStart:"Sélectionnez dans l'ordre : client → type → largeur → longueur<br>pour afficher les infos d'emballage.",
+  hintMore:'Sélectionnez les éléments restants pour voir les détails.',
+  hintNone:'Aucune spécification pour cette combinaison.<br>Veuillez réessayer.',
+  footer:'{n} spécifications enregistrées · Fonctionne hors ligne',
+  fPallet:'Palette', fGanji:'Intercalaire (간지)', fAircap:'Papier bulle (에어캡)', fMaguri:'Panneau latéral (마구리)',
+  fBox:'Carton', fBobbin:'Bobine', fOpp:'Couleur OPP', fBand:'Couleur cerclage',
+  fLabel:'Couleur étiquette', fExp:"Péremption sur l'étiquette", fNote:'Remarques',
+  notListed:'non indiqué',
+  na:'Sans objet (X)', yes:'Oui', yesMonth:'Oui ({n} mois)', yesYear:'Oui ({n} an)',
+  shipPH:'Expédition Philippines → coller CARGO MARKINGS',
+  shipBS:'Expédition Busan → SANS étiquette PLT',
+  reportBtn:'⚠ Signaler si cette spécification est incorrecte',
+  fab:'✉ Envoyer un avis',
+  modalTitle:'Signalement / Avis',
+  ctx:'Spécification : ',
+  typeL:'Type', t1:'Différent de la réalité', t2:"Demande d'ajout d'une spécification", t3:'Autre avis',
+  contentL:'Contenu',
+  textPH:'Ex : la bobine est bleue, pas ivoire',
+  nameL:'Nom · équipe (facultatif)', namePH:'Ex : équipe emballage',
+  close:'Fermer', send:'Envoyer', sending:'Envoi...', done:'Envoyé',
+  ok:'Reçu. Nous vérifierons et mettrons à jour la spécification.',
+  fail:"Échec de l'envoi. Vérifiez la connexion et réessayez.",
+  tk_노랑:'Jaune', tk_파랑:'Bleu', tk_빨강:'Rouge', tk_아이보리:'Ivoire', tk_녹색:'Vert',
+  tk_검정:'Noir', tk_흰색:'Blanc', tk_보라:'Violet', tk_주황:'Orange', tk_투명:'Transparent',
+  tk_전용:'Dédié', tk_정방향:'Sens normal', tk_역방향:'Sens inverse',
+  nStd:"※ Absent du standard d'emballage (Ver.2) — selon la méthode de l'équipe emballage",
+  nPH:'Pour les Philippines — coller le Cargo Marking', nPH2:'Pour les Philippines',
+  nBS:'Pour Busan — sans étiquette palette', nBS2:'Pour Busan',
+  nPin1:'Avec plaque à pointes (침판)', nPin0:'Sans plaque à pointes (침판)',
+  nGz:'intercalaire estimé', nLbl:"Couleur étiquette : estimée selon la règle OPP↔étiquette",
+  nStack:'{a} niveaux × {b} pcs', nRolls:'{n} rouleaux/palette'
+}
+};
+
+function t(k){
+  const d = I18N[LANG] || I18N.ko;
+  if(k in d) return d[k];
+  return I18N.ko[k] !== undefined ? I18N.ko[k] : k;
+}
+
+const TOKEN_RE = /노랑|파랑|빨강|아이보리|녹색|검정|흰색|보라|주황|투명|전용|정방향|역방향/g;
+function trValue(v){
+  if(LANG==='ko' || !v) return v;
+  return String(v).replace(TOKEN_RE, m=>t('tk_'+m));
+}
+
+const NOTE_SRC = {
+  nStd:'※포장 표준(Ver.2) 미등재 — 포장반 작업방법 기준',
+  nPH:'필리핀향 — Cargo Marking 부착',
+  nBS:'부산향 — 파렛트 라벨 미부착',
+  nPin1:'침판 부착',
+  nPin0:'침판 미부착',
+  nLbl:'라벨 색: OPP↔라벨 대응 기준 추정',
+  nGz:'간지 추정',
+  nPH2:'필리핀향',
+  nBS2:'부산향'
+};
+const NOTE_ORDER = ['nStd','nPH','nBS','nPin0','nPin1','nLbl','nGz','nPH2','nBS2'];
+function trNote(v){
+  if(LANG==='ko' || !v) return v;
+  let s = String(v);
+  NOTE_ORDER.forEach(k=>{ s = s.split(NOTE_SRC[k]).join(t(k)); });
+  s = s.replace(/(\d)단\s*(\d+)개(\s*적재)?/g, (m,a,b)=>t('nStack').replace('{a}',a).replace('{b}',b));
+  s = s.replace(/(\d+)\s*ROLL\/파렛트/g, (m,n)=>t('nRolls').replace('{n}',n));
+  s = s.replace(TOKEN_RE, m=>t('tk_'+m));
+  return s;
+}
+
 const $ = id => document.getElementById(id);
 const selBuyer=$('selBuyer'), selProd=$('selProd'), selWidth=$('selWidth'), selLen=$('selLen');
 const results=$('results'), countLabel=$('countLabel');
-$('totalCount').textContent = DATA.length;
 
 const EMPTY_TOKEN = '__EMPTY__';
 const numSort = (a,b)=>{
@@ -341,14 +619,15 @@ function uniq(rows, key, numeric){
   return numeric ? seen.sort(numSort) : seen;
 }
 
-function fillSelect(sel, values, placeholder){
+function fillSelect(sel, values, phKey){
   sel.innerHTML='';
+  sel.dataset.ph = phKey;
   const p=document.createElement('option');
-  p.value=''; p.textContent=placeholder; sel.appendChild(p);
+  p.value=''; p.textContent=t(phKey); sel.appendChild(p);
   values.forEach(v=>{
     const o=document.createElement('option');
     o.value = v===''? EMPTY_TOKEN : v;
-    o.textContent = v===''? '(길이 미기재)' : v;
+    o.textContent = v===''? t('lenEmpty') : trValue(v);
     sel.appendChild(o);
   });
   sel.disabled=false;
@@ -357,8 +636,11 @@ function fillSelect(sel, values, placeholder){
   return false;
 }
 
-function lockSelect(sel, placeholder){
-  sel.innerHTML='<option value="">'+placeholder+'</option>';
+function lockSelect(sel, phKey){
+  sel.dataset.ph = phKey;
+  sel.innerHTML='';
+  const p=document.createElement('option');
+  p.value=''; p.textContent=t(phKey); sel.appendChild(p);
   sel.disabled=true;
 }
 
@@ -386,20 +668,20 @@ function setStepState(){
 }
 
 function onBuyer(){
-  lockSelect(selWidth,'폭 선택'); lockSelect(selLen,'길이 선택');
-  if(!selBuyer.value){ lockSelect(selProd,'품종 선택'); render(); return; }
-  const auto=fillSelect(selProd, uniq(getFiltered(1),'품종',false), '품종 선택');
+  lockSelect(selWidth,'phWidth'); lockSelect(selLen,'phLen');
+  if(!selBuyer.value){ lockSelect(selProd,'phProd'); render(); return; }
+  const auto=fillSelect(selProd, uniq(getFiltered(1),'품종',false), 'phProd');
   if(auto) onProd(); else render();
 }
 function onProd(){
-  lockSelect(selLen,'길이 선택');
-  if(!selProd.value){ lockSelect(selWidth,'폭 선택'); render(); return; }
-  const auto=fillSelect(selWidth, uniq(getFiltered(2),'폭',true), '폭 선택');
+  lockSelect(selLen,'phLen');
+  if(!selProd.value){ lockSelect(selWidth,'phWidth'); render(); return; }
+  const auto=fillSelect(selWidth, uniq(getFiltered(2),'폭',true), 'phWidth');
   if(auto) onWidth(); else render();
 }
 function onWidth(){
-  if(!selWidth.value){ lockSelect(selLen,'길이 선택'); render(); return; }
-  const auto=fillSelect(selLen, uniq(getFiltered(3),'길이',true), '길이 선택');
+  if(!selWidth.value){ lockSelect(selLen,'phLen'); render(); return; }
+  const auto=fillSelect(selLen, uniq(getFiltered(3),'길이',true), 'phLen');
   if(auto) onLen(); else render();
 }
 function onLen(){ render(); }
@@ -410,7 +692,7 @@ selWidth.addEventListener('change', onWidth);
 selLen.addEventListener('change', onLen);
 $('btnReset').addEventListener('click', ()=>{
   selBuyer.selectedIndex=0;
-  lockSelect(selProd,'품종 선택'); lockSelect(selWidth,'폭 선택'); lockSelect(selLen,'길이 선택');
+  lockSelect(selProd,'phProd'); lockSelect(selWidth,'phWidth'); lockSelect(selLen,'phLen');
   render();
 });
 
@@ -420,64 +702,71 @@ function colorCell(v){
   if(!v) return '<span class="badge">－</span>';
   if(COLOR_MAP[v]){
     const bg=COLOR_MAP[v];
-    return '<span class="chip"><span class="sw" style="background:'+bg+'"></span>'+esc(v)+'</span>';
+    return '<span class="chip"><span class="sw" style="background:'+bg+'"></span>'+esc(trValue(v))+'</span>';
   }
-  if(v==='투명') return '<span class="chip"><span class="sw transparent"></span>투명</span>';
-  return esc(v);
+  if(v==='투명') return '<span class="chip"><span class="sw transparent"></span>'+esc(trValue(v))+'</span>';
+  return esc(trValue(v));
 }
 function bobbinCell(v){
   if(!v) return '<span class="badge">－</span>';
   const first=v.split(/\s+/)[0];
   if(COLOR_MAP[first]){
-    return '<span class="chip"><span class="sw" style="background:'+COLOR_MAP[first]+'"></span>'+esc(v)+'</span>';
+    return '<span class="chip"><span class="sw" style="background:'+COLOR_MAP[first]+'"></span>'+esc(trValue(v))+'</span>';
   }
-  return esc(v);
+  return esc(trValue(v));
 }
 function xoCell(v){
   if(!v) return '<span class="badge">－</span>';
-  if(v==='X') return '<span class="badge">해당 없음 (X)</span>';
-  if(v.startsWith('O')) return '<span class="badge on">'+esc(v)+'</span>';
-  return esc(v);
+  if(v==='X') return '<span class="badge">'+esc(t('na'))+'</span>';
+  if(v.startsWith('O')){
+    let label = v;
+    if(LANG!=='ko'){
+      const m = v.match(/^O\((\d+)\s*(개월|년)/);
+      if(m) label = (m[2]==='년' ? t('yesYear') : t('yesMonth')).replace('{n}', m[1]);
+      else label = t('yes');
+    }
+    return '<span class="badge on">'+esc(label)+'</span>';
+  }
+  return esc(trValue(v));
 }
 function noteCell(v){
   if(!v) return '';
   const warn = v.includes('미등재') || v.includes('확인');
-  return '<div class="note'+(warn?'':' plain')+'">'+esc(v)+'</div>';
+  return '<div class="note'+(warn?'':' plain')+'">'+esc(trNote(v))+'</div>';
 }
 
 function shipTags(r){
   if(!r['출하'] || !r['출하'].length) return '';
   const map={
-    '필리핀':'<span class="tag ph">필리핀 출하 → CARGO MARKINGS 부착</span>',
-    '부산':'<span class="tag bs">부산 출하 → PLT 라벨 미부착</span>'
+    '필리핀':'<span class="tag ph">'+esc(t('shipPH'))+'</span>',
+    '부산':'<span class="tag bs">'+esc(t('shipBS'))+'</span>'
   };
   return '<span class="ship">' + r['출하'].map(d=>map[d]||'').join('') + '</span>';
 }
 
 function card(r){
-  const len = r['길이'] ? r['길이']+'m 상당' : '길이 미기재';
   return `
   <article class="card">
     <div class="card-head">
       <span class="buyer">${esc(r['바이어'])}</span>
       <span class="prod">${esc(r['품종'])}</span>
-      <span class="dim">폭 <b>${esc(r['폭'])||'－'}</b> × 길이 <b>${esc(r['길이'])||'미기재'}</b></span>
+      <span class="dim">${esc(t('width'))} <b>${esc(trValue(r['폭']))||'－'}</b> × ${esc(t('len'))} <b>${esc(trValue(r['길이']))||esc(t('notListed'))}</b></span>
       ${shipTags(r)}
     </div>
     <table class="spec">
-      <tr><th>파렛트 규격</th><td>${esc(r['파렛트 규격'])||'<span class="badge">－</span>'}</td></tr>
-      <tr><th>간지 규격</th><td>${esc(r['간지 규격'])||'<span class="badge">－</span>'}</td></tr>
-      <tr><th>에어캡 규격</th><td>${xoCell(r['에어캡 규격'])}</td></tr>
-      <tr><th>마구리 규격</th><td>${esc(r['마구리 규격'])||'<span class="badge">－</span>'}</td></tr>
-      <tr><th>박스 규격</th><td>${esc(r['박스 규격'])||'<span class="badge">－</span>'}</td></tr>
-      <tr><th>보빈 규격</th><td>${bobbinCell(r['보빈 규격'])}</td></tr>
-      <tr><th>OPP 색</th><td>${colorCell(r['OPP 색'])}</td></tr>
-      <tr><th>밴딩 색</th><td>${colorCell(r['밴딩 색'])}</td></tr>
-      <tr><th>라벨 색</th><td>${colorCell(r['라벨 색'])}</td></tr>
-      <tr><th>라벨 유효기간</th><td>${xoCell(r['라벨 유효기간 표기'])}</td></tr>
-      ${r['비고'] ? '<tr><th>비고</th><td>'+noteCell(r['비고'])+'</td></tr>' : ''}
+      <tr><th>${esc(t('fPallet'))}</th><td>${esc(trValue(r['파렛트 규격']))||'<span class="badge">－</span>'}</td></tr>
+      <tr><th>${esc(t('fGanji'))}</th><td>${esc(trValue(r['간지 규격']))||'<span class="badge">－</span>'}</td></tr>
+      <tr><th>${esc(t('fAircap'))}</th><td>${xoCell(r['에어캡 규격'])}</td></tr>
+      <tr><th>${esc(t('fMaguri'))}</th><td>${esc(trValue(r['마구리 규격']))||'<span class="badge">－</span>'}</td></tr>
+      <tr><th>${esc(t('fBox'))}</th><td>${esc(trValue(r['박스 규격']))||'<span class="badge">－</span>'}</td></tr>
+      <tr><th>${esc(t('fBobbin'))}</th><td>${bobbinCell(r['보빈 규격'])}</td></tr>
+      <tr><th>${esc(t('fOpp'))}</th><td>${colorCell(r['OPP 색'])}</td></tr>
+      <tr><th>${esc(t('fBand'))}</th><td>${colorCell(r['밴딩 색'])}</td></tr>
+      <tr><th>${esc(t('fLabel'))}</th><td>${colorCell(r['라벨 색'])}</td></tr>
+      <tr><th>${esc(t('fExp'))}</th><td>${xoCell(r['라벨 유효기간 표기'])}</td></tr>
+      ${r['비고'] ? '<tr><th>'+esc(t('fNote'))+'</th><td>'+noteCell(r['비고'])+'</td></tr>' : ''}
     </table>
-    <button type="button" class="report-btn" data-report="${esc(r['바이어'])}|${esc(r['품종'])}|${esc(r['폭'])}|${esc(r['길이'])}">⚠ 이 규격이 실제와 다르면 신고하기</button>
+    <button type="button" class="report-btn" data-report="${esc(r['바이어'])}|${esc(r['품종'])}|${esc(r['폭'])}|${esc(r['길이'])}">${esc(t('reportBtn'))}</button>
   </article>`;
 }
 
@@ -488,28 +777,76 @@ function render(){
     const lvl = selWidth.value?3 : selProd.value?2 : selBuyer.value?1 : 0;
     if(lvl===0){
       countLabel.textContent='';
-      results.innerHTML='<div class="hint">바이어부터 순서대로 선택하면<br>해당 규격의 포장 정보가 표시됩니다.</div>';
+      results.innerHTML='<div class="hint">'+t('hintStart')+'</div>';
     }else{
       const n=getFiltered(lvl).length;
-      countLabel.innerHTML='조건에 해당하는 규격 <b>'+n+'</b>건';
-      results.innerHTML='<div class="hint">나머지 항목을 선택하면 상세 규격이 표시됩니다.</div>';
+      countLabel.innerHTML=t('countPartial').replace('{n}',n);
+      results.innerHTML='<div class="hint">'+t('hintMore')+'</div>';
     }
     return;
   }
   const rows=getFiltered(4);
-  countLabel.innerHTML='조회 결과 <b>'+rows.length+'</b>건';
+  countLabel.innerHTML=t('countResult').replace('{n}',rows.length);
   if(rows.length===0){
-    results.innerHTML='<div class="hint">해당 조합의 규격이 없습니다.<br>조건을 다시 선택해 주세요.</div>';
+    results.innerHTML='<div class="hint">'+t('hintNone')+'</div>';
     return;
   }
   results.innerHTML=rows.map(card).join('');
 }
 
+// ===== 언어 적용 =====
+function applyLang(l){
+  LANG = l;
+  try{ localStorage.setItem(LANG_KEY, l); }catch(e){}
+  document.documentElement.lang = l;
+  document.documentElement.dir = (l==='ar') ? 'rtl' : 'ltr';
+  document.querySelectorAll('#langBar button').forEach(b=>b.classList.toggle('on', b.dataset.lang===l));
+
+  $('appTitle').textContent = t('title');
+  $('baseDoc').textContent = t('baseDoc');
+  $('updLabel').textContent = t('updated');
+  $('lblBuyer').textContent = t('buyer');
+  $('lblProd').textContent = t('prod');
+  $('lblWidth').textContent = t('width');
+  $('lblLen').textContent = t('len');
+
+  [selBuyer, selProd, selWidth, selLen].forEach(sel=>{
+    if(!sel.options.length) return;
+    const key = sel.dataset.ph;
+    if(key) sel.options[0].textContent = t(key);
+    for(const o of sel.options){
+      if(o.value===EMPTY_TOKEN) o.textContent = t('lenEmpty');
+      else if(o.value && (sel===selWidth || sel===selLen)) o.textContent = trValue(o.value);
+    }
+  });
+
+  $('btnReset').textContent = t('reset');
+  $('appFooter').innerHTML = t('footer').replace('{n}','<b>'+DATA.length+'</b>');
+  $('fabReport').textContent = t('fab');
+  $('modalTitle').textContent = t('modalTitle');
+  $('lblType').textContent = t('typeL');
+  const ro = $('repType').options;
+  ro[0].textContent = t('t1'); ro[1].textContent = t('t2'); ro[2].textContent = t('t3');
+  $('lblText').innerHTML = esc(t('contentL'))+' <span style="color:var(--accent)">*</span>';
+  $('repText').placeholder = t('textPH');
+  $('lblName').textContent = t('nameL');
+  $('repName').placeholder = t('namePH');
+  $('btnModalCancel').textContent = t('close');
+  const sendBtn = $('btnModalSend');
+  if(!sendBtn.disabled) sendBtn.textContent = t('send');
+
+  render();
+}
+$('langBar').addEventListener('click', e=>{
+  const b = e.target.closest('button[data-lang]');
+  if(b) applyLang(b.dataset.lang);
+});
+
 // 초기화
-fillSelect(selBuyer, uniq(DATA,'바이어',false), '바이어 선택');
+fillSelect(selBuyer, uniq(DATA,'바이어',false), 'phBuyer');
 selBuyer.selectedIndex=0;
-lockSelect(selProd,'품종 선택'); lockSelect(selWidth,'폭 선택'); lockSelect(selLen,'길이 선택');
-render();
+lockSelect(selProd,'phProd'); lockSelect(selWidth,'phWidth'); lockSelect(selLen,'phLen');
+applyLang(LANG);
 
 // ===== 신고 기능 =====
 const W3F_KEY = '5eefade2-154e-47fb-a781-76fad5d8abc6';
@@ -522,7 +859,7 @@ function openModal(ctx){
   reportCtx = ctx;
   if(ctx){
     modalCtx.style.display='block';
-    modalCtx.textContent = '대상 규격: ' + ctx.join(' / ');
+    modalCtx.textContent = t('ctx') + ctx.join(' / ');
     repType.value='규격 불일치';
   }else{
     modalCtx.style.display='none';
@@ -530,7 +867,7 @@ function openModal(ctx){
   }
   repText.value=''; repName.value='';
   sendMsg.className='send-msg'; sendMsg.textContent='';
-  btnSend.disabled=false; btnSend.textContent='신고 전송';
+  btnSend.disabled=false; btnSend.textContent=t('send');
   modalBack.classList.add('open');
   repText.focus();
 }
@@ -548,7 +885,7 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
 btnSend.addEventListener('click', async ()=>{
   const text=repText.value.trim();
   if(!text){ repText.focus(); return; }
-  btnSend.disabled=true; btnSend.textContent='전송 중...';
+  btnSend.disabled=true; btnSend.textContent=t('sending');
   sendMsg.className='send-msg'; sendMsg.textContent='';
   const subjectSpec = reportCtx ? reportCtx.join(' / ') : '일반 의견';
   const payload={
@@ -559,6 +896,7 @@ btnSend.addEventListener('click', async ()=>{
     '대상 규격': subjectSpec,
     '내용': text,
     '신고자': repName.value.trim() || '(미기재)',
+    '언어': LANG,
     '신고 시각': new Date().toLocaleString('ko-KR')
   };
   try{
@@ -570,14 +908,14 @@ btnSend.addEventListener('click', async ()=>{
     const data=await res.json();
     if(data.success){
       sendMsg.className='send-msg ok';
-      sendMsg.textContent='접수되었습니다. 확인 후 규격에 반영하겠습니다.';
-      btnSend.textContent='전송 완료';
+      sendMsg.textContent=t('ok');
+      btnSend.textContent=t('done');
       setTimeout(closeModal, 1800);
     }else{ throw new Error(data.message||'fail'); }
   }catch(err){
     sendMsg.className='send-msg fail';
-    sendMsg.textContent='전송에 실패했습니다. 인터넷 연결을 확인하고 다시 눌러주세요.';
-    btnSend.disabled=false; btnSend.textContent='신고 전송';
+    sendMsg.textContent=t('fail');
+    btnSend.disabled=false; btnSend.textContent=t('send');
   }
 });
 
