@@ -279,6 +279,7 @@
       <button type="button" data-lang="vi">Tiếng Việt</button>
       <button type="button" data-lang="ar">العربية</button>
       <button type="button" data-lang="fr">Français</button>
+      <button type="button" data-lang="si">සිංහල</button>
     </div>
   </div>
 </header>
@@ -351,7 +352,7 @@ const COLOR_MAP = {
 // ===== 다국어 (i18n) =====
 const LANG_KEY = 'pkgspec-lang';
 let LANG = 'ko';
-try{ const saved = localStorage.getItem(LANG_KEY); if(saved && ['ko','en','vi','ar','fr'].includes(saved)) LANG = saved; }catch(e){}
+try{ const saved = localStorage.getItem(LANG_KEY); if(saved && ['ko','en','vi','ar','fr','si'].includes(saved)) LANG = saved; }catch(e){}
 
 const I18N = {
 ko: {
@@ -563,6 +564,48 @@ fr: {
   nPin1:'Avec plaque à pointes (침판)', nPin0:'Sans plaque à pointes (침판)',
   nGz:'intercalaire estimé', nLbl:"Couleur étiquette : estimée selon la règle OPP↔étiquette",
   nStack:'{a} niveaux × {b} pcs', nRolls:'{n} rouleaux/palette'
+},
+si: {
+  title:'ගැනුම්කරු අනුව ඇසුරුම් පිරිවිතර සෙවීම',
+  baseDoc:'මූලාශ්‍රය: ගැනුම්කරු අනුව ඇසුරුම් පිරිවිතර ලැයිස්තුව v5',
+  updated:'අවසන් යාවත්කාලීනය',
+  buyer:'ගැනුම්කරු', prod:'නිෂ්පාදන වර්ගය', width:'පළල', len:'දිග',
+  phBuyer:'ගැනුම්කරු තෝරන්න', phProd:'වර්ගය තෝරන්න', phWidth:'පළල තෝරන්න', phLen:'දිග තෝරන්න',
+  lenEmpty:'(දිග සඳහන් නැත)',
+  reset:'නැවත සකසන්න',
+  countPartial:'ගැළපෙන පිරිවිතර: <b>{n}</b>',
+  countResult:'ප්‍රතිඵල: <b>{n}</b>',
+  hintStart:'අනුපිළිවෙලින් තෝරන්න: ගැනුම්කරු → වර්ගය → පළල → දිග<br>ඇසුරුම් තොරතුරු පෙන්වයි.',
+  hintMore:'ඉතිරි අයිතම තෝරා විස්තර බලන්න.',
+  hintNone:'මෙම සංයෝජනයට පිරිවිතර නැත.<br>නැවත තෝරන්න.',
+  footer:'ලියාපදිංචි පිරිවිතර {n} · අන්තර්ජාලය නොමැතිවද ක්‍රියා කරයි',
+  fPallet:'පැලට් (Pallet)', fGanji:'අතරමැදි කඩදාසිය (간지)', fAircap:'බුබුලු ආවරණය (에어캡)', fMaguri:'පැති පුවරුව (마구리)',
+  fBox:'පෙට්ටිය (Box)', fBobbin:'බොබින් (Bobbin)', fOpp:'OPP වර්ණය', fBand:'පටි වර්ණය',
+  fLabel:'ලේබල් වර්ණය', fExp:'ලේබලයේ කල් ඉකුත් දිනය', fNote:'සටහන්',
+  notListed:'සඳහන් නැත',
+  na:'අදාළ නැත (X)', yes:'ඔව්', yesMonth:'ඔව් (මාස {n})', yesYear:'ඔව් (වසර {n})',
+  shipPH:'පිලිපීනයට යැවීම → CARGO MARKINGS අලවන්න',
+  shipBS:'බුසාන් වෙත යැවීම → PLT ලේබලය නොඅලවන්න',
+  reportBtn:'⚠ මෙම පිරිවිතරය වැරදි නම් වාර්තා කරන්න',
+  fab:'✉ අදහස් යවන්න',
+  modalTitle:'වාර්තා කිරීම / අදහස්',
+  ctx:'අදාළ පිරිවිතරය: ',
+  typeL:'වර්ගය', t1:'පිරිවිතරය සැබෑ තත්ත්වයට වඩා වෙනස්', t2:'නැති පිරිවිතරයක් එක් කිරීමට ඉල්ලීම', t3:'වෙනත් අදහසක්',
+  contentL:'අන්තර්ගතය',
+  textPH:'උදා: බොබින් වර්ණය අයිවරි නොව නිල් ය',
+  nameL:'නම · අංශය (අත්‍යවශ්‍ය නොවේ)', namePH:'උදා: ඇසුරුම් කණ්ඩායම',
+  close:'වසන්න', send:'යවන්න', sending:'යවමින්...', done:'යවා අවසන්',
+  ok:'ලැබුණි. පරීක්ෂා කර පිරිවිතරය යාවත්කාලීන කරන්නෙමු.',
+  fail:'යැවීම අසාර්ථකයි. සම්බන්ධතාවය පරීක්ෂා කර නැවත උත්සාහ කරන්න.',
+  tk_노랑:'කහ', tk_파랑:'නිල්', tk_빨강:'රතු', tk_아이보리:'අයිවරි', tk_녹색:'කොළ',
+  tk_검정:'කළු', tk_흰색:'සුදු', tk_보라:'දම්', tk_주황:'තැඹිලි', tk_투명:'විනිවිද පෙනෙන',
+  tk_전용:'විශේෂිත', tk_정방향:'ඉදිරි දිශාව', tk_역방향:'ප්‍රතිලෝම දිශාව',
+  nStd:'※ ඇසුරුම් ප්‍රමිතියේ (Ver.2) නැත — ඇසුරුම් කණ්ඩායමේ ක්‍රමය අනුව',
+  nPH:'පිලිපීනයට — Cargo Marking අලවන්න', nPH2:'පිලිපීනයට',
+  nBS:'බුසාන් වෙත — පැලට් ලේබලය නැත', nBS2:'බුසාන් වෙත',
+  nPin1:'කටු පුවරුව (침판) සමඟ', nPin0:'කටු පුවරුව (침판) නැත',
+  nGz:'අතරමැදි කඩදාසි ප්‍රමාණය ඇස්තමේන්තුවකි', nLbl:'ලේබල් වර්ණය: OPP↔ලේබල් රීතිය අනුව ඇස්තමේන්තුවකි',
+  nStack:'තට්ටු {a} × {b} ක්', nRolls:'රෝල් {n}/පැලට්'
 }
 };
 
